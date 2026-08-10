@@ -96,25 +96,31 @@ def _strip_html(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _extract_body(payload: dict) -> str:
-    """Gmail messages are a tree of MIME parts. Walk it looking for
-    text/plain first, falling back to text/html (stripped) if that's all
-    there is."""
-    def walk(part: dict) -> Optional[str]:
+def extract_email_body(payload: dict) -> str:
+    """Safely extracts plain-text or HTML body from a Gmail API message payload."""
+    body_text = ""
+    
+    # 1. Check direct body data
+    if "body" in payload and "data" in payload["body"]:
+        data = payload["body"]["data"]
+        # Add padding to prevent Incorrect padding errors
+        data += "=" * ((4 - len(data) % 4) % 4)
+        return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+    
+    # 2. Check multipart payload structures
+    parts = payload.get("parts", [])
+    for part in parts:
         mime_type = part.get("mimeType", "")
-        body_data = part.get("body", {}).get("data")
-        if mime_type == "text/plain" and body_data:
-            return base64.urlsafe_b64decode(body_data + "==").decode("utf-8", errors="ignore")
-        for sub_part in part.get("parts", []):
-            found = walk(sub_part)
-            if found:
-                return found
-        if mime_type == "text/html" and body_data:
-            html = base64.urlsafe_b64decode(body_data + "==").decode("utf-8", errors="ignore")
-            return _strip_html(html)
-        return None
-
-    return walk(payload) or ""
+        data = part.get("body", {}).get("data", "")
+        
+        if mime_type == "text/plain" and data:
+            data += "=" * ((4 - len(data) % 4) % 4)
+            return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+        elif mime_type == "text/html" and data and not body_text:
+            data += "=" * ((4 - len(data) % 4) % 4)
+            body_text = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+            
+    return body_text or "(No text content available)"
 
 
 def get_message(access_token: str, message_id: str, max_body_chars: int = 3000) -> dict:
@@ -128,7 +134,7 @@ def get_message(access_token: str, message_id: str, max_body_chars: int = 3000) 
     msg = resp.json()
 
     headers = {h["name"].lower(): h["value"] for h in msg["payload"].get("headers", [])}
-    body = _extract_body(msg["payload"])[:max_body_chars]
+    body = extract_email_body(msg["payload"])[:max_body_chars]
 
     return {
         "id": msg["id"],

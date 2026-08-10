@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     google_client_secret: str
     google_redirect_uri: str
     frontend_url: str = ""
+    gemini_api_key: str = ""  # Required for RAG "Ask about this email" feature
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
