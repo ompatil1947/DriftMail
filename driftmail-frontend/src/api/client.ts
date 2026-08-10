@@ -105,8 +105,8 @@ export const disconnectGmail = async (): Promise<void> => {
 
 // ── Gmail inbox ───────────────────────────────────────────────────────────────
 
-export const syncGmailInbox = async (maxResults = 10): Promise<InboxEmail[]> => {
-  const res = await api.get('/gmail/inbox', { params: { max_results: maxResults } })
+export const syncGmailInbox = async (maxResults = 20): Promise<Email[]> => {
+  const res = await api.post('/emails/sync', null, { params: { max_results: maxResults } })
   return res.data
 }
 

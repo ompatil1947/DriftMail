@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { getAuthStatus, syncGmailInbox, disconnectGmail } from '../api/client'
@@ -15,6 +15,7 @@ export default function Sidebar({ onAddEmail }: { onAddEmail: () => void }) {
   } = useFilterStore()
 
   const [syncing, setSyncing] = useState(false)
+  const queryClient = useQueryClient()
 
   const { data: authStatus, refetch: refetchAuth } = useQuery({
     queryKey: ['auth-status'],
@@ -29,10 +30,17 @@ export default function Sidebar({ onAddEmail }: { onAddEmail: () => void }) {
     }
     setSyncing(true)
     try {
-      const emails = await syncGmailInbox(10)
-      toast.success(`Synced ${emails.length} emails from Gmail`)
-    } catch {
-      toast.error('Gmail sync failed')
+      const newEmails = await syncGmailInbox(20)
+      // Invalidate the emails cache so InboxList refetches from DB immediately
+      await queryClient.invalidateQueries({ queryKey: ['emails'] })
+      if (newEmails.length === 0) {
+        toast.success('Inbox up to date — no new emails')
+      } else {
+        toast.success(`✓ Synced ${newEmails.length} new email${newEmails.length !== 1 ? 's' : ''} from Gmail`)
+      }
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      toast.error(typeof detail === 'string' ? detail : 'Gmail sync failed — check connection')
     } finally {
       setSyncing(false)
     }

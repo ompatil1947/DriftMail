@@ -49,3 +49,38 @@ def inbox(max_results: int = Query(default=10, ge=1, le=MAX_RESULTS_CAP)):
         )
 
     return results
+
+
+@router.get("/debug")
+def debug_gmail():
+    """
+    Diagnostic endpoint — returns the current token status and attempts to list
+    the 5 most recent message IDs from Gmail.  Use this to confirm the OAuth
+    token is valid before troubleshooting the sync flow.
+    Visit: http://localhost:8000/gmail/debug
+    """
+    status = token_store.get_status()
+    if not status["connected"]:
+        return {"connected": False, "message": "No token on file. Go to /auth/google/login first."}
+
+    try:
+        access_token = token_store.get_valid_access_token()
+    except token_store.GmailReconnectRequired as e:
+        return {"connected": False, "error": str(e), "action": "Go to /auth/google/login to reconnect."}
+
+    try:
+        message_ids = gmail_service.list_recent_message_ids(access_token, max_results=5)
+        return {
+            "connected": True,
+            "token_expires_at": status["expires_at"],
+            "gmail_api": "OK",
+            "sample_message_ids": message_ids,
+            "message_count": len(message_ids),
+        }
+    except Exception as exc:
+        return {
+            "connected": True,
+            "token_expires_at": status["expires_at"],
+            "gmail_api": "ERROR",
+            "error": str(exc),
+        }

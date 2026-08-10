@@ -2,6 +2,7 @@
 /emails — CRUD endpoints for stored emails + RAG Q&A.
 
 POST   /emails                  — manually classify & persist an email
+POST   /emails/sync             — fetch Gmail inbox, classify, save to DB, return saved emails
 GET    /emails                  — list with filters (category, priority, starred, pinned, search)
 GET    /emails/{id}             — full detail row
 PATCH  /emails/{id}             — toggle starred / pinned
@@ -9,6 +10,7 @@ POST   /emails/{id}/ask         — RAG "ask about this email"
 GET    /emails/{id}/qa-history  — prior Q&A pairs for this email
 """
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -24,6 +26,7 @@ from app.schemas.db_schemas import (
     QARequest,
     QAResponse,
 )
+from app.services import gmail_service, token_store
 from app.services.model_service import classifier
 from app.services.rag_service import semantic_rag
 
@@ -63,6 +66,90 @@ def create_email(payload: EmailCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(email)
     return email
+
+
+@router.post("/sync", response_model=List[EmailOut])
+def sync_gmail(max_results: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db)):
+    """
+    Fetch the latest emails from Gmail, classify each one with the BiGRU model,
+    and save them to the local database.  Already-stored messages (matched by
+    google_message_id) are skipped so re-syncing never creates duplicates.
+    Returns the full list of newly-saved emails (may be empty if everything was
+    already synced).
+    """
+    # 1. Validate Gmail connection
+    try:
+        access_token = token_store.get_valid_access_token()
+    except token_store.GmailReconnectRequired:
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error_code": "RECONNECT_REQUIRED",
+                "message": "Gmail isn't connected, or the connection expired. "
+                           "Go to /auth/google/login to reconnect.",
+            },
+        )
+
+    # 2. Fetch message IDs from Gmail
+    try:
+        message_ids = gmail_service.list_recent_message_ids(access_token, max_results)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Gmail API error: {exc}") from exc
+
+    saved: List[Email] = []
+
+    for message_id in message_ids:
+        # Skip if already in the database
+        existing = db.query(Email).filter(Email.google_message_id == message_id).first()
+        if existing:
+            continue
+
+        # 3. Fetch the full message
+        try:
+            msg = gmail_service.get_message(access_token, message_id)
+        except Exception:
+            # Don't let one bad message abort the entire sync
+            continue
+
+        # 4. Parse the received date; fall back to now if unparseable
+        received_at = datetime.now(timezone.utc)
+        if msg.get("date"):
+            try:
+                received_at = parsedate_to_datetime(msg["date"])
+            except Exception:
+                pass
+
+        # 5. Classify with the BiGRU model
+        subject = msg.get("subject") or "(no subject)"
+        body = msg.get("body") or msg.get("snippet") or ""
+        try:
+            category, cat_conf, priority, pri_conf = classifier.predict(subject, body)
+        except Exception:
+            category, cat_conf, priority, pri_conf = "inbox", 0.5, "medium", 0.5
+
+        # 6. Persist to the database
+        email = Email(
+            google_message_id=message_id,
+            subject=subject,
+            body=body,
+            sender=msg.get("sender", ""),
+            category=category,
+            category_confidence=cat_conf,
+            priority=priority,
+            priority_confidence=pri_conf,
+            source="gmail",
+            received_at=received_at,
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(email)
+        try:
+            db.commit()
+            db.refresh(email)
+            saved.append(email)
+        except Exception:
+            db.rollback()  # e.g. unique constraint on google_message_id
+
+    return saved
 
 
 @router.get("", response_model=List[EmailOut])
