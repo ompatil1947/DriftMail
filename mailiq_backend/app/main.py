@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import Base, engine
 from app.routers import auth, emails, gmail, inference
 from app.services.rag_service import semantic_rag
+from app.core.config import settings
 
 
 @asynccontextmanager
