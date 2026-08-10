@@ -20,7 +20,7 @@ function QABubble({ item }: { item: QAHistoryItem }) {
     >
       {/* User question */}
       <div className="flex justify-end">
-        <div className="max-w-[78%] bg-[#0A0A0A] text-white rounded-2xl rounded-tr-sm px-5 py-4 text-[14px] leading-relaxed">
+        <div className="max-w-[78%] bg-[#0A0A0A] text-white rounded-2xl rounded-tr-sm px-5 py-4 text-[14px] leading-relaxed shadow-sm">
           {item.question}
         </div>
       </div>
@@ -31,11 +31,11 @@ function QABubble({ item }: { item: QAHistoryItem }) {
           <span className="text-[#0A0A0A] text-[12px] font-bold">✦</span>
         </div>
         {item.grounded ? (
-          <div className="max-w-[82%] bg-[#F2EAE0] border border-[#E2D6C0] rounded-2xl rounded-tl-sm px-5 py-4 text-[14px] text-[#0A0A0A] leading-relaxed">
+          <div className="max-w-[82%] bg-[#F2EAE0] border border-[#E2D6C0] rounded-2xl rounded-tl-sm px-5 py-4 text-[14px] text-[#0A0A0A] leading-relaxed shadow-sm">
             {item.answer}
           </div>
         ) : (
-          <div className="max-w-[82%] border border-dashed border-[#D4C5A9] bg-[#F2EAE0] rounded-2xl rounded-tl-sm px-5 py-4 text-[14px] text-[#888] leading-relaxed">
+          <div className="max-w-[82%] border border-dashed border-[#D4C5A9] bg-[#F2EAE0] rounded-2xl rounded-tl-sm px-5 py-4 text-[14px] text-[#888] leading-relaxed shadow-sm">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm">🔍</span>
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#888]">Not grounded in email</span>
@@ -75,7 +75,7 @@ function AskInput({ emailId, onAsked }: { emailId: number; onAsked: () => void }
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
         placeholder="Ask anything about this email…"
-        className="flex-1 px-5 py-4 rounded-xl bg-[#E8DEC8] border border-[#D4C5A9] text-[15px] text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors placeholder-[#A89F8F]"
+        className="flex-1 px-5 py-4 rounded-xl bg-[#E8DEC8] border border-[#D4C5A9] text-[15px] text-[#0A0A0A] focus:outline-none focus:border-[#0A0A0A] transition-colors placeholder-[#A89F8F] shadow-inner"
         disabled={isPending}
       />
       <button
@@ -138,78 +138,86 @@ export default function DetailPanel() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 500, opacity: 0 }}
       transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-      className="absolute right-0 top-0 bottom-0 w-[480px] flex flex-col z-20 overflow-hidden bg-[#F2EAE0]"
+      className="absolute right-0 top-0 bottom-0 w-[520px] flex flex-col z-20 overflow-hidden bg-[#F2EAE0] border-l border-[#D4C5A9]"
       style={{ boxShadow: '-4px 0 32px rgba(0,0,0,0.08)' }}
     >
-      {/* ── Header ── */}
-      <div className="px-6 pt-6 pb-5 flex-shrink-0 border-b border-[#E2D6C0] bg-white">
-        <div className="flex items-start justify-between gap-4 mb-4">
-          <h2 className="text-[16px] font-bold text-[#0A0A0A] leading-snug flex-1">{email.subject}</h2>
+      
+      {/* ── Tabs & Close Button (Sticky Top) ── */}
+      <div className="flex items-center gap-4 px-6 py-4 border-b border-[#E2D6C0] bg-white flex-shrink-0">
+        <div className="flex-1 flex gap-2">
           <button
-            onClick={() => selectEmail(null)}
-            className="haptic w-9 h-9 rounded-lg bg-[#E8DEC8] hover:bg-[#D4C5A9] flex items-center justify-center text-[#555] hover:text-[#0A0A0A] transition-colors text-sm flex-shrink-0"
-            title="Close"
-          >✕</button>
+            onClick={() => setTab('email')}
+            className={`haptic flex-1 py-3 rounded-xl text-[14px] font-bold transition-all ${
+              tab === 'email'
+                ? 'bg-[#0A0A0A] text-white'
+                : 'text-[#666] hover:text-[#0A0A0A] bg-[#E8DEC8]'
+            }`}
+          >
+            Email
+          </button>
+          <button
+            onClick={() => setTab('ai')}
+            className={`haptic flex-1 py-3 rounded-xl text-[14px] font-bold transition-all relative ${
+              tab === 'ai'
+                ? 'bg-[#0A0A0A] text-white'
+                : 'text-[#666] hover:text-[#0A0A0A] bg-[#E8DEC8]'
+            }`}
+          >
+            Ask AI ✦
+            {qaHistory.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#0A0A0A] text-white text-[10px] font-bold flex items-center justify-center border-2 border-[#F2EAE0]">
+                {qaHistory.length}
+              </span>
+            )}
+          </button>
         </div>
-
-        {email.sender && (
-          <p className="text-[14px] text-[#666] mb-4 truncate font-medium">From: <span className="text-[#0A0A0A]">{email.sender}</span></p>
-        )}
-
-        {/* Badges */}
-        <div className="flex gap-2.5 flex-wrap mb-5">
-          <CategoryBadge category={email.category} />
-          <PriorityBadge priority={email.priority} />
-        </div>
-
-        {/* ── ML Confidence Bars ── */}
-        <div className="space-y-4 bg-[#F2EAE0] p-4 rounded-xl border border-[#E2D6C0]">
-          <ConfidenceBar label="Category Confidence" value={email.category_confidence} />
-          <ConfidenceBar label="Priority Confidence" value={email.priority_confidence} />
-        </div>
+        <button
+          onClick={() => selectEmail(null)}
+          className="haptic w-12 h-12 rounded-xl bg-[#E8DEC8] hover:bg-[#D4C5A9] flex items-center justify-center text-[#555] hover:text-[#0A0A0A] transition-colors text-lg flex-shrink-0"
+          title="Close"
+        >✕</button>
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="flex gap-1.5 px-6 py-4 border-b border-[#E2D6C0] bg-white flex-shrink-0">
-        <button
-          onClick={() => setTab('email')}
-          className={`haptic flex-1 py-3 rounded-xl text-[14px] font-bold transition-all ${
-            tab === 'email'
-              ? 'bg-[#0A0A0A] text-white'
-              : 'text-[#666] hover:text-[#0A0A0A] bg-[#E8DEC8]'
-          }`}
-        >
-          Email
-        </button>
-        <button
-          onClick={() => setTab('ai')}
-          className={`haptic flex-1 py-3 rounded-xl text-[14px] font-bold transition-all relative ${
-            tab === 'ai'
-              ? 'bg-[#0A0A0A] text-white'
-              : 'text-[#666] hover:text-[#0A0A0A] bg-[#E8DEC8]'
-          }`}
-        >
-          Ask AI ✦
-          {qaHistory.length > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#0A0A0A] text-white text-[10px] font-bold flex items-center justify-center border-2 border-[#F2EAE0]">
-              {qaHistory.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* ── Content ── */}
+      {/* ── Content Area ── */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+        
         {tab === 'email' ? (
-          <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-6">
-            <p className="text-[15px] text-[#333] leading-loose whitespace-pre-wrap">
-              {email.body || <span className="text-[#999] italic font-medium">(empty body)</span>}
-            </p>
+          /* EMAIL VIEW: Scrollable massive header + email body */
+          <div className="flex-1 overflow-y-auto scrollbar-thin flex flex-col bg-white">
+            <div className="px-6 pt-6 pb-6 flex-shrink-0 border-b border-[#E2D6C0] bg-[#F9F6F0]">
+              <h2 className="text-[20px] font-bold text-[#0A0A0A] leading-snug mb-4">{email.subject}</h2>
+
+              {email.sender && (
+                <p className="text-[14px] text-[#666] mb-5 truncate font-medium">From: <span className="text-[#0A0A0A]">{email.sender}</span></p>
+              )}
+
+              {/* Badges */}
+              <div className="flex gap-2.5 flex-wrap mb-6">
+                <CategoryBadge category={email.category} />
+                <PriorityBadge priority={email.priority} />
+              </div>
+
+              {/* ── ML Confidence Bars ── */}
+              <div className="space-y-4 bg-white p-5 rounded-xl border border-[#E2D6C0] shadow-sm">
+                <ConfidenceBar label="Category Confidence" value={email.category_confidence} />
+                <ConfidenceBar label="Priority Confidence" value={email.priority_confidence} />
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-6 flex-1">
+              <p className="text-[15px] text-[#333] leading-loose whitespace-pre-wrap">
+                {email.body || <span className="text-[#999] italic font-medium">(empty body)</span>}
+              </p>
+            </div>
           </div>
+
         ) : (
-          <div className="flex-1 flex flex-col min-h-0">
+
+          /* AI CHAT VIEW: Full height */
+          <div className="flex-1 flex flex-col min-h-0 bg-white">
             {/* RAG AI Header */}
-            <div className="px-6 py-5 flex-shrink-0 border-b border-[#E2D6C0] bg-[#E8DEC8]">
+            <div className="px-6 py-4 flex-shrink-0 border-b border-[#E2D6C0] bg-[#E8DEC8]">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[15px] font-bold text-[#0A0A0A]">RAG-Powered Q&A</p>
@@ -223,22 +231,15 @@ export default function DetailPanel() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-6 space-y-6 min-h-0" ref={scrollRef}>
+            <div className="flex-1 overflow-y-auto scrollbar-thin px-6 py-6 space-y-6 min-h-0 bg-[#F9F6F0]" ref={scrollRef}>
               {qaHistory.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full gap-6 text-center py-10">
-                  <div className="w-20 h-20 rounded-2xl bg-[#E8DEC8] border border-[#D4C5A9] flex items-center justify-center text-4xl">✦</div>
+                  <div className="w-16 h-16 rounded-2xl bg-[#E8DEC8] border border-[#D4C5A9] flex items-center justify-center text-3xl">✦</div>
                   <div>
                     <p className="text-[18px] font-bold text-[#0A0A0A]">Ask anything</p>
-                    <p className="text-[14px] text-[#666] mt-2 max-w-[240px] leading-relaxed font-medium">
+                    <p className="text-[14px] text-[#666] mt-2 max-w-[240px] leading-relaxed font-medium mx-auto">
                       I'll ground my answer strictly in this email's content.
                     </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2.5 justify-center">
-                    {['Who sent this?', 'Summarize this', 'Any action items?'].map(s => (
-                      <span key={s} className="text-[12px] font-bold text-[#444] bg-white border border-[#D4C5A9] px-4 py-2 rounded-full">
-                        {s}
-                      </span>
-                    ))}
                   </div>
                 </div>
               ) : (
@@ -251,6 +252,7 @@ export default function DetailPanel() {
               <AskInput emailId={selectedEmailId!} onAsked={scrollToBottom} />
             </div>
           </div>
+
         )}
       </div>
     </motion.div>

@@ -20,7 +20,7 @@ export default function Sidebar({ onAddEmail }: { onAddEmail: () => void }) {
         <div className="space-y-5">
           <div>
             <label className="text-[13px] font-bold text-[#0A0A0A] uppercase tracking-[0.2em]">Category</label>
-            <p className="text-[13px] text-[#444] mt-1.5 font-medium">ML Text Classification</p>
+            <p className="text-[13px] text-[#444] mt-1.5 font-medium">Bidirectional GRU Classification</p>
           </div>
           <div className="flex flex-wrap gap-2.5">
             {CATEGORIES.map((cat) => {

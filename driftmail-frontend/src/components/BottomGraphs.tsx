@@ -10,16 +10,16 @@ const MassiveDonut = ({ data, title, subtitle }: { data: { label: string, val: n
   let offset = 25 
   
   return (
-    <div className="flex flex-col items-center gap-16 bg-white border border-[#D4C5A9] rounded-[48px] p-20 flex-1 shadow-sm">
+    <div className="flex flex-col items-center gap-10 bg-white border border-[#D4C5A9] rounded-[32px] p-10 flex-1 shadow-sm">
       
       {/* Title */}
-      <div className="text-center space-y-3">
-        <h3 className="text-[42px] font-black text-[#0A0A0A] tracking-tight">{title}</h3>
-        <p className="text-[20px] text-[#666] font-medium">{subtitle}</p>
+      <div className="text-center space-y-2">
+        <h3 className="text-[32px] font-black text-[#0A0A0A] tracking-tight">{title}</h3>
+        <p className="text-[16px] text-[#666] font-medium">{subtitle}</p>
       </div>
 
       {/* Chart */}
-      <div className="relative w-[400px] h-[400px] flex-shrink-0">
+      <div className="relative w-[280px] h-[280px] flex-shrink-0">
         <svg viewBox="0 0 42 42" className="w-full h-full -rotate-90 drop-shadow-md">
           <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#E8DEC8" strokeWidth="4" />
           {data.map((item, i) => {
@@ -45,22 +45,22 @@ const MassiveDonut = ({ data, title, subtitle }: { data: { label: string, val: n
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-[#0A0A0A]">
-          <span className="text-[72px] font-black leading-none tracking-tight">{total}</span>
-          <span className="text-[20px] font-bold text-[#888] mt-2 uppercase tracking-[0.2em]">Total</span>
+          <span className="text-[56px] font-black leading-none tracking-tight">{total}</span>
+          <span className="text-[16px] font-bold text-[#888] mt-1 uppercase tracking-[0.2em]">Total</span>
         </div>
       </div>
 
       {/* Legend */}
-      <div className="w-full max-w-md space-y-6 mt-4">
+      <div className="w-full max-w-md space-y-5 mt-2">
         {data.sort((a,b) => b.val - a.val).slice(0, 4).map((item, i) => (
           <div key={i} className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
-              <div className="w-6 h-6 rounded-full shadow-inner" style={{ backgroundColor: item.color }} />
-              <span className="text-[24px] text-[#222] font-bold">{item.label}</span>
+            <div className="flex items-center gap-4">
+              <div className="w-5 h-5 rounded-full shadow-inner" style={{ backgroundColor: item.color }} />
+              <span className="text-[20px] text-[#222] font-bold">{item.label}</span>
             </div>
-            <div className="flex items-center gap-6">
-              <span className="text-[24px] text-[#888] font-bold">{item.val}</span>
-              <span className="text-[24px] font-black text-[#0A0A0A] w-20 text-right">{Math.round((item.val / total) * 100)}%</span>
+            <div className="flex items-center gap-4">
+              <span className="text-[20px] text-[#888] font-bold">{item.val}</span>
+              <span className="text-[20px] font-black text-[#0A0A0A] w-16 text-right">{Math.round((item.val / total) * 100)}%</span>
             </div>
           </div>
         ))}
@@ -118,9 +118,9 @@ export default function BottomGraphs() {
   })
 
   return (
-    <div className="w-full max-w-[1800px] flex gap-12 items-center justify-center">
-      <MassiveDonut data={pData} title="Priority Analytics" subtitle="Machine Learning Scoring Model Output" />
-      <MassiveDonut data={cData} title="Category Classification" subtitle="BERT Text Classification Output" />
+    <div className="w-full max-w-[1100px] flex gap-12 items-center justify-center">
+      <MassiveDonut data={pData} title="Priority Analytics" subtitle="Priority Scoring Model Output" />
+      <MassiveDonut data={cData} title="Category Classification" subtitle="BIGRU Text Classification Output" />
     </div>
   )
 }
