@@ -12,7 +12,7 @@
     -moz-osx-font-smoothing: grayscale;
   }
   body {
-    background: #F2EDE3;
+    background: #E8DEC8;
     color: #0A0A0A;
     margin: 0;
     overflow: hidden;
@@ -21,7 +21,7 @@
 
 @layer utilities {
   .shimmer {
-    background: linear-gradient(90deg, #e8e2d5 0%, #f0ebe0 50%, #e8e2d5 100%);
+    background: linear-gradient(90deg, #DFD6C2 0%, #E8DEC8 50%, #DFD6C2 100%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }

@@ -6,11 +6,14 @@ POST /auth/google/disconnect -> forget the stored tokens
 """
 import secrets
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.services import gmail_service, token_store
+from app.db.database import get_db
+from app.db.models import Email, QAHistory
 
 router = APIRouter(prefix="/auth/google", tags=["auth"])
 
@@ -19,6 +22,16 @@ router = APIRouter(prefix="/auth/google", tags=["auth"])
 # for something shared (Redis, a DB row) since each worker would otherwise
 # have its own copy of this set.
 _pending_states: set[str] = set()
+
+
+def _clear_gmail_data(db: Session):
+    """Helper to wipe all Gmail-sourced emails and their Q&A history."""
+    gmail_emails = db.query(Email).filter(Email.source == "gmail").all()
+    if gmail_emails:
+        email_ids = [e.id for e in gmail_emails]
+        db.query(QAHistory).filter(QAHistory.email_id.in_(email_ids)).delete(synchronize_session=False)
+        db.query(Email).filter(Email.source == "gmail").delete(synchronize_session=False)
+        db.commit()
 
 
 @router.get("/login")
@@ -34,6 +47,7 @@ def callback(
     code: str | None = Query(default=None),
     state: str | None = Query(default=None),
     error: str | None = Query(default=None),
+    db: Session = Depends(get_db),
 ):
     if error:
         # e.g. the user clicked "Cancel" on Google's consent screen
@@ -49,6 +63,8 @@ def callback(
     try:
         tokens = gmail_service.exchange_code_for_tokens(code)
         token_store.save_tokens(tokens)
+        # Wipe old Gmail data when a new account is connected
+        _clear_gmail_data(db)
     except gmail_service.GoogleTokenError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
@@ -63,6 +79,8 @@ def status():
 
 
 @router.post("/disconnect")
-def disconnect():
+def disconnect(db: Session = Depends(get_db)):
     token_store.disconnect()
+    # Wipe old Gmail data when disconnected
+    _clear_gmail_data(db)
     return {"disconnected": True}
