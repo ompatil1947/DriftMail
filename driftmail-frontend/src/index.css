@@ -15,7 +15,8 @@
     background: #E8DEC8;
     color: #0A0A0A;
     margin: 0;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 }
 
