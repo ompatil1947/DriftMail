@@ -1,5 +1,5 @@
 import React from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listEmails, patchEmail, type Email } from '../api/client'
 import { useFilterStore } from '../store/filterStore'
@@ -104,7 +104,7 @@ export default function InboxList() {
   })
 
   return (
-    <div className="flex-1 flex flex-col bg-white border-r border-slate-100 overflow-hidden min-w-0">
+    <div className="flex-1 flex flex-col bg-white overflow-hidden min-w-0 relative">
       {/* Header */}
       <div className="px-5 py-4 border-b border-slate-100 bg-white sticky top-0 z-10">
         <div className="flex items-center justify-between">
@@ -137,6 +137,35 @@ export default function InboxList() {
           </motion.div>
         )}
       </div>
+
+      {/* Floating hint — visible only when no email is selected and there are emails */}
+      <AnimatePresence>
+        {!selectedEmailId && (emails?.length ?? 0) > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 30, delay: 0.3 }}
+            className="absolute bottom-6 right-6 pointer-events-none"
+          >
+            <div className="bg-[#1A1A2E] text-white rounded-2xl px-5 py-4 shadow-2xl border border-[#2E2E50] max-w-[240px]">
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#6C63FF] to-[#8B84FF] flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm">✦</span>
+                </div>
+                <p className="text-sm font-semibold text-white">Open an email</p>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Click any email to read it, see AI classification, and ask questions about it.
+              </p>
+              <div className="mt-3 flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#6C63FF] animate-pulse" />
+                <span className="text-[10px] text-[#6C63FF] font-semibold">AI-powered Q&amp;A ready</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
