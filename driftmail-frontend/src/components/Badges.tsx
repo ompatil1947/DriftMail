@@ -1,4 +1,5 @@
 import React from 'react'
+import { motion } from 'framer-motion'
 import { CATEGORY_COLORS, PRIORITY_COLORS, formatCategory } from '../utils/colors'
 
 export const CategoryBadge = ({ category }: { category: string }) => {
@@ -23,15 +24,17 @@ export const PriorityBadge = ({ priority }: { priority: string }) => {
 }
 
 export const ConfidenceBar = ({ label, value }: { label: string; value: number }) => (
-  <div className="space-y-1">
-    <div className="flex justify-between text-xs text-slate-500">
-      <span>{label}</span>
-      <span className="font-medium text-slate-700">{Math.round(value * 100)}%</span>
+  <div className="space-y-1.5">
+    <div className="flex justify-between items-baseline">
+      <span className="text-[11px] font-semibold text-[#555] uppercase tracking-wide">{label}</span>
+      <span className="text-[15px] font-bold text-[#0A0A0A]">{Math.round(value * 100)}%</span>
     </div>
-    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-      <div
-        className="h-full bg-gradient-to-r from-[#6C63FF] to-[#8B84FF] rounded-full transition-all duration-700"
-        style={{ width: `${value * 100}%` }}
+    <div className="h-3 bg-[#EDE8DC] rounded-full overflow-hidden">
+      <motion.div
+        initial={{ width: 0 }}
+        animate={{ width: `${value * 100}%` }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+        className="h-full bg-[#0A0A0A] rounded-full"
       />
     </div>
   </div>

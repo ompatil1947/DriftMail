@@ -1,15 +1,15 @@
 import React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listEmails, patchEmail, type Email } from '../api/client'
 import { useFilterStore } from '../store/filterStore'
 import { CategoryBadge, PriorityBadge } from './Badges'
 
 const SkeletonRow = () => (
-  <div className="p-4 border-b border-slate-100 space-y-2 animate-pulse">
-    <div className="flex items-center gap-2">
-      <div className="shimmer h-3 w-48 rounded" />
-      <div className="shimmer h-4 w-16 rounded-full ml-auto" />
+  <div className="px-6 py-5 border-b border-[#EDE8DC] space-y-3 animate-pulse">
+    <div className="flex items-center justify-between gap-3">
+      <div className="shimmer h-4 w-52 rounded" />
+      <div className="shimmer h-5 w-24 rounded-full" />
     </div>
     <div className="shimmer h-3 w-full rounded" />
     <div className="shimmer h-3 w-3/4 rounded" />
@@ -21,65 +21,59 @@ function EmailRow({ email, selected, onClick }: {
   selected: boolean
   onClick: () => void
 }) {
-  const qc = useQueryClient()
-  const { mutate: toggle } = useMutation({
-    mutationFn: (patch: { starred?: boolean; pinned?: boolean }) =>
-      patchEmail(email.id, patch),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['emails'] }),
-  })
-
-  const preview = email.body.replace(/\s+/g, ' ').slice(0, 90)
+  const preview = email.body.replace(/\s+/g, ' ').slice(0, 100)
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -4 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+      exit={{ opacity: 0 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 32 }}
       onClick={onClick}
-      className={`relative px-5 py-4 cursor-pointer border-b border-slate-100 transition-all duration-150 group
+      className={`relative px-6 py-5 cursor-pointer border-b border-[#EDE8DC] transition-all duration-150
         ${selected
-          ? 'bg-[#6C63FF]/5 border-l-2 border-l-[#6C63FF]'
-          : 'hover:bg-slate-50 hover:shadow-card hover:-translate-y-px border-l-2 border-l-transparent'
+          ? 'bg-[#0A0A0A] border-l-4 border-l-[#0A0A0A]'
+          : 'bg-white hover:bg-[#FAF7F2] border-l-4 border-l-transparent'
         }`}
     >
-      {/* Pin indicator */}
-      {email.pinned && (
-        <span className="absolute top-3 left-1 text-[#6C63FF] text-[9px]">📌</span>
-      )}
-
-      <div className="flex items-start justify-between gap-2 mb-1.5">
-        <h3 className={`text-sm font-semibold leading-tight line-clamp-1 ${selected ? 'text-[#6C63FF]' : 'text-slate-800'}`}>
+      {/* Row 1: Subject + Badges on right */}
+      <div className="flex items-start justify-between gap-4 mb-2">
+        <h3 className={`text-[14px] font-semibold leading-snug flex-1 line-clamp-1 ${
+          selected ? 'text-white' : 'text-[#0A0A0A]'
+        }`}>
           {email.subject || '(no subject)'}
         </h3>
 
-        {/* Star + Pin buttons */}
-        <div className="flex gap-1 flex-shrink-0 items-center">
-          <button
-            onClick={(e) => { e.stopPropagation(); toggle({ pinned: !email.pinned }) }}
-            className={`haptic p-1.5 text-base transition-colors rounded-md ${email.pinned ? 'text-[#6C63FF] bg-[#6C63FF]/5' : 'text-slate-300 hover:text-[#6C63FF] hover:bg-slate-100 opacity-0 group-hover:opacity-100'}`}
-            title={email.pinned ? 'Unpin' : 'Pin'}
-          >
-            📌
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); toggle({ starred: !email.starred }) }}
-            className={`haptic p-1.5 text-base transition-colors rounded-md ${email.starred ? 'text-amber-400 bg-amber-400/5' : 'text-slate-300 hover:text-amber-400 hover:bg-slate-100 opacity-0 group-hover:opacity-100'}`}
-            title={email.starred ? 'Unstar' : 'Star'}
-          >
-            {email.starred ? '★' : '☆'}
-          </button>
+        {/* Category + Priority badges — always on the right */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <CategoryBadge category={email.category} />
+          <PriorityBadge priority={email.priority} />
         </div>
       </div>
 
-      <p className="text-xs text-slate-500 line-clamp-2 mb-2 leading-relaxed">{preview}</p>
+      {/* Row 2: Preview */}
+      <p className={`text-[12px] line-clamp-2 leading-relaxed ${
+        selected ? 'text-white/60' : 'text-[#888]'
+      }`}>
+        {preview}
+      </p>
 
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <CategoryBadge category={email.category} />
-        <PriorityBadge priority={email.priority} />
+      {/* Row 3: Meta */}
+      <div className="flex items-center gap-2 mt-2.5">
         {email.source === 'gmail' && (
-          <span className="text-[10px] text-slate-400 ml-auto">Gmail</span>
+          <span className={`text-[10px] font-medium flex items-center gap-1 ${
+            selected ? 'text-white/40' : 'text-[#AAA]'
+          }`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+            Gmail
+          </span>
+        )}
+        {email.pinned && (
+          <span className={`text-[10px] ${selected ? 'text-white/40' : 'text-[#AAA]'}`}>📌 Pinned</span>
+        )}
+        {email.starred && (
+          <span className={`text-[10px] ${selected ? 'text-amber-300' : 'text-amber-500'}`}>★ Starred</span>
         )}
       </div>
     </motion.div>
@@ -104,15 +98,20 @@ export default function InboxList() {
   })
 
   return (
-    <div className="flex-1 flex flex-col bg-white overflow-hidden min-w-0 relative">
+    <div className="flex-1 flex flex-col overflow-hidden min-w-0 bg-white">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-100 bg-white sticky top-0 z-10">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-slate-700">Inbox</h2>
-          <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+      <div className="px-6 py-5 border-b border-[#EDE8DC] flex items-center justify-between bg-white flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <h2 className="text-[15px] font-bold text-[#0A0A0A]">Inbox</h2>
+          <span className="text-[11px] text-[#888] bg-[#F2EDE3] px-2.5 py-1 rounded-full font-semibold">
             {emails?.length ?? 0} emails
           </span>
         </div>
+        {(categories.length > 0 || priorities.length > 0 || starred || pinned || search) && (
+          <span className="text-[11px] text-[#0A0A0A] bg-[#F2EDE3] border border-[#DDD8CE] px-2.5 py-1 rounded-full font-medium">
+            Filtered
+          </span>
+        )}
       </div>
 
       {/* List */}
@@ -120,9 +119,9 @@ export default function InboxList() {
         {isLoading ? (
           Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
         ) : emails?.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3 p-8">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">📭</div>
-            <p className="text-sm text-center">No emails found.<br />Try adjusting your filters.</p>
+          <div className="flex flex-col items-center justify-center h-full text-[#AAA] gap-4 p-10">
+            <div className="w-16 h-16 rounded-2xl bg-[#F2EDE3] flex items-center justify-center text-3xl">📭</div>
+            <p className="text-[14px] text-center text-[#999]">No emails found.<br /><span className="text-[12px]">Try adjusting your filters.</span></p>
           </div>
         ) : (
           <motion.div layout>
@@ -137,35 +136,6 @@ export default function InboxList() {
           </motion.div>
         )}
       </div>
-
-      {/* Floating hint — visible only when no email is selected and there are emails */}
-      <AnimatePresence>
-        {!selectedEmailId && (emails?.length ?? 0) > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 30, delay: 0.3 }}
-            className="absolute bottom-6 right-6 pointer-events-none"
-          >
-            <div className="bg-[#1A1A2E] text-white rounded-2xl px-5 py-4 shadow-2xl border border-[#2E2E50] max-w-[240px]">
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#6C63FF] to-[#8B84FF] flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-sm">✦</span>
-                </div>
-                <p className="text-sm font-semibold text-white">Open an email</p>
-              </div>
-              <p className="text-xs text-slate-400 leading-relaxed">
-                Click any email to read it, see AI classification, and ask questions about it.
-              </p>
-              <div className="mt-3 flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#6C63FF] animate-pulse" />
-                <span className="text-[10px] text-[#6C63FF] font-semibold">AI-powered Q&amp;A ready</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   )
 }

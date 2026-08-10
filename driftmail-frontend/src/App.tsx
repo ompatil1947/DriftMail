@@ -10,6 +10,7 @@ import InboxList from './components/InboxList'
 import DetailPanel from './components/DetailPanel'
 import AddEmailModal from './components/AddEmailModal'
 import GmailBanner from './components/GmailBanner'
+import Navbar from './components/Navbar'
 import { useFilterStore } from './store/filterStore'
 
 const queryClient = new QueryClient({
@@ -56,18 +57,23 @@ function AppContent() {
   }, [])
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#F5F4F0]">
+    <div className="flex flex-col h-screen w-screen overflow-hidden pastel-bg">
       <GmailBanner show={reconnectBanner} />
-      <Sidebar onAddEmail={() => setAddModalOpen(true)} />
 
-      {/* Main area — InboxList always fills remaining space */}
-      <div className="flex flex-1 min-w-0 overflow-hidden relative">
-        <InboxList />
+      {/* Top Navbar */}
+      <Navbar onAddEmail={() => setAddModalOpen(true)} />
 
-        {/* DetailPanel slides in from right only when an email is selected */}
-        <AnimatePresence>
-          {selectedEmailId && <DetailPanel key="detail" />}
-        </AnimatePresence>
+      {/* Body: Sidebar + Main */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        <Sidebar onAddEmail={() => setAddModalOpen(true)} />
+
+        {/* Main area */}
+        <div className="flex flex-1 min-w-0 overflow-hidden relative">
+          <InboxList />
+          <AnimatePresence>
+            {selectedEmailId && <DetailPanel key="detail" />}
+          </AnimatePresence>
+        </div>
       </div>
 
       <AddEmailModal open={addModalOpen} onClose={() => setAddModalOpen(false)} />
@@ -76,14 +82,15 @@ function AppContent() {
         position="bottom-right"
         toastOptions={{
           style: {
-            background: '#1A1A2E',
+            background: 'rgba(26, 16, 53, 0.92)',
+            backdropFilter: 'blur(12px)',
             color: '#e2e8f0',
-            borderRadius: '12px',
-            border: '1px solid #2E2E50',
+            borderRadius: '14px',
+            border: '1px solid rgba(108,99,255,0.3)',
             fontSize: '13px',
             fontFamily: 'Inter, sans-serif',
           },
-          success: { iconTheme: { primary: '#6C63FF', secondary: '#fff' } },
+          success: { iconTheme: { primary: '#a78bfa', secondary: '#fff' } },
         }}
       />
     </div>
