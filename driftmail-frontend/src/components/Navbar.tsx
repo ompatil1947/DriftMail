@@ -15,7 +15,7 @@ export default function Navbar() {
 
   const handleSync = async () => {
     if (!authStatus?.connected) {
-      window.location.href = 'http://localhost:8000/auth/google/login'
+      window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/auth/google/login`
       return
     }
     setSyncing(true)
