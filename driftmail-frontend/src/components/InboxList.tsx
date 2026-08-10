@@ -55,17 +55,17 @@ function EmailRow({ email, selected, onClick }: {
         </h3>
 
         {/* Star + Pin buttons */}
-        <div className="flex gap-1 flex-shrink-0">
+        <div className="flex gap-1 flex-shrink-0 items-center">
           <button
             onClick={(e) => { e.stopPropagation(); toggle({ pinned: !email.pinned }) }}
-            className={`haptic text-sm transition-colors ${email.pinned ? 'text-[#6C63FF]' : 'text-slate-300 hover:text-[#6C63FF] opacity-0 group-hover:opacity-100'}`}
+            className={`haptic p-1.5 text-base transition-colors rounded-md ${email.pinned ? 'text-[#6C63FF] bg-[#6C63FF]/5' : 'text-slate-300 hover:text-[#6C63FF] hover:bg-slate-100 opacity-0 group-hover:opacity-100'}`}
             title={email.pinned ? 'Unpin' : 'Pin'}
           >
             📌
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); toggle({ starred: !email.starred }) }}
-            className={`haptic text-sm transition-colors ${email.starred ? 'text-amber-400' : 'text-slate-300 hover:text-amber-400 opacity-0 group-hover:opacity-100'}`}
+            className={`haptic p-1.5 text-base transition-colors rounded-md ${email.starred ? 'text-amber-400 bg-amber-400/5' : 'text-slate-300 hover:text-amber-400 hover:bg-slate-100 opacity-0 group-hover:opacity-100'}`}
             title={email.starred ? 'Unstar' : 'Star'}
           >
             {email.starred ? '★' : '☆'}
