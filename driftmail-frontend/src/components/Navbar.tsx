@@ -1,10 +1,9 @@
 import React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { getAuthStatus, syncGmailInbox, disconnectGmail, listEmails } from '../api/client'
+import { getAuthStatus, syncGmailInbox, disconnectGmail } from '../api/client'
 
-export default function Navbar({ onAddEmail }: { onAddEmail: () => void }) {
+export default function Navbar() {
   const queryClient = useQueryClient()
   const [syncing, setSyncing] = React.useState(false)
 
@@ -13,18 +12,6 @@ export default function Navbar({ onAddEmail }: { onAddEmail: () => void }) {
     queryFn: getAuthStatus,
     refetchInterval: 30000,
   })
-
-  const { data: allEmails = [] } = useQuery({
-    queryKey: ['emails', {}],
-    queryFn: () => listEmails({}),
-    refetchInterval: 10000,
-  })
-
-  const total  = allEmails.length
-  const high   = allEmails.filter(e => e.priority === 'high').length
-  const medium = allEmails.filter(e => e.priority === 'medium').length
-  const low    = allEmails.filter(e => e.priority === 'low').length
-  const pct    = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0
 
   const handleSync = async () => {
     if (!authStatus?.connected) {
@@ -64,41 +51,7 @@ export default function Navbar({ onAddEmail }: { onAddEmail: () => void }) {
         <span className="font-sora font-bold text-2xl text-white tracking-tight">DriftMail</span>
       </div>
 
-      {/* Priority distribution — the ML output showcase */}
-      {total > 0 && (
-        <div className="flex items-center gap-6 flex-1">
-          {/* Stacked bar */}
-          <div className="flex h-3.5 rounded-full overflow-hidden bg-white/10 w-56 flex-shrink-0">
-            <motion.div initial={{ width: 0 }} animate={{ width: `${pct(high)}%` }}
-              transition={{ duration: 0.9, ease: 'easeOut' }}
-              className="bg-red-400 h-full" />
-            <motion.div initial={{ width: 0 }} animate={{ width: `${pct(medium)}%` }}
-              transition={{ duration: 0.9, ease: 'easeOut', delay: 0.1 }}
-              className="bg-amber-400 h-full" />
-            <motion.div initial={{ width: 0 }} animate={{ width: `${pct(low)}%` }}
-              transition={{ duration: 0.9, ease: 'easeOut', delay: 0.2 }}
-              className="bg-emerald-400 h-full" />
-          </div>
-
-          {/* Labels */}
-          <div className="flex items-center gap-6">
-            {[
-              { label: 'High',   n: high,   color: 'text-red-400',     dot: 'bg-red-400' },
-              { label: 'Medium', n: medium, color: 'text-amber-400',   dot: 'bg-amber-400' },
-              { label: 'Low',    n: low,    color: 'text-emerald-400', dot: 'bg-emerald-400' },
-            ].map(({ label, n, color, dot }) => (
-              <div key={label} className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${dot}`} />
-                <span className={`text-[15px] font-bold ${color}`}>{pct(n)}%</span>
-                <span className="text-[14px] font-medium text-white/40">{label}</span>
-              </div>
-            ))}
-            <span className="text-[14px] font-medium text-white/30 ml-2">{total} total emails</span>
-          </div>
-        </div>
-      )}
-
-      {/* Right controls */}
+      {/* Right controls (pushed to far right via ml-auto on the wrapper) */}
       <div className="flex items-center gap-4 ml-auto flex-shrink-0">
         <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border text-[14px] font-bold ${
           authStatus?.connected
@@ -122,11 +75,6 @@ export default function Navbar({ onAddEmail }: { onAddEmail: () => void }) {
             className="haptic w-12 h-12 rounded-xl bg-white/5 border border-white/10 hover:bg-red-500/20 hover:border-red-500/30 flex items-center justify-center text-white/40 hover:text-red-400 transition-colors text-lg"
             title="Disconnect Gmail">✕</button>
         )}
-
-        <button onClick={onAddEmail}
-          className="haptic px-6 py-3.5 rounded-xl bg-white/10 border border-white/15 text-white text-[15px] font-bold hover:bg-white/20 transition-colors">
-          + Add Email
-        </button>
       </div>
     </nav>
   )

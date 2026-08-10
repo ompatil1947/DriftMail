@@ -101,11 +101,6 @@ export default function InboxList() {
             {emails?.length ?? 0} emails
           </span>
         </div>
-        {(categories.length > 0 || priorities.length > 0 || starred || pinned || search) && (
-          <span className="text-[13px] text-[#0A0A0A] bg-[#E8DEC8] border border-[#D4C5A9] px-3 py-1 rounded-full font-bold">
-            Filtered
-          </span>
-        )}
       </div>
 
       {/* List */}
