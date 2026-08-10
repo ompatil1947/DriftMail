@@ -32,6 +32,7 @@ export const useFilterStore = create<FilterState>((set) => ({
 
   toggleCategory: (cat) =>
     set((s) => ({
+      priorities: [], // Clear priorities when selecting category
       categories: s.categories.includes(cat)
         ? s.categories.filter((c) => c !== cat)
         : [...s.categories, cat],
@@ -39,9 +40,9 @@ export const useFilterStore = create<FilterState>((set) => ({
 
   togglePriority: (pri) =>
     set((s) => ({
-      priorities: s.priorities.includes(pri)
-        ? s.priorities.filter((p) => p !== pri)
-        : [...s.priorities, pri],
+      categories: [], // Clear categories when selecting priority
+      // Single select: if clicking the active one, clear it. Otherwise, set it as the only active priority.
+      priorities: s.priorities.includes(pri) ? [] : [pri],
     })),
 
   toggleStarred: () => set((s) => ({ starred: !s.starred })),
