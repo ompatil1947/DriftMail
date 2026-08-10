@@ -3,19 +3,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import toast from 'react-hot-toast'
 import axios from 'axios'
+import { AnimatePresence } from 'framer-motion'
 
 import Sidebar from './components/Sidebar'
 import InboxList from './components/InboxList'
 import DetailPanel from './components/DetailPanel'
 import AddEmailModal from './components/AddEmailModal'
 import GmailBanner from './components/GmailBanner'
+import { useFilterStore } from './store/filterStore'
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5000,
       retry: (failureCount, error) => {
-        // Don't retry on 401 (token errors) — surface them immediately
         if (axios.isAxiosError(error) && error.response?.status === 401) return false
         return failureCount < 2
       },
@@ -26,8 +27,8 @@ const queryClient = new QueryClient({
 function AppContent() {
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [reconnectBanner, setReconnectBanner] = useState(false)
+  const { selectedEmailId } = useFilterStore()
 
-  // Global 401 interceptor — detect RECONNECT_REQUIRED and show banner
   useEffect(() => {
     const interceptorId = axios.interceptors.response.use(
       (res) => res,
@@ -45,7 +46,6 @@ function AppContent() {
     return () => axios.interceptors.response.eject(interceptorId)
   }, [])
 
-  // Check for gmail_connected=true param on load
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('gmail_connected') === 'true') {
@@ -57,22 +57,21 @@ function AppContent() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F5F4F0]">
-      {/* Reconnect banner */}
       <GmailBanner show={reconnectBanner} />
-
-      {/* Sidebar */}
       <Sidebar onAddEmail={() => setAddModalOpen(true)} />
 
-      {/* Main area */}
-      <div className="flex flex-1 min-w-0 overflow-hidden">
+      {/* Main area — InboxList always fills remaining space */}
+      <div className="flex flex-1 min-w-0 overflow-hidden relative">
         <InboxList />
-        <DetailPanel />
+
+        {/* DetailPanel slides in from right only when an email is selected */}
+        <AnimatePresence>
+          {selectedEmailId && <DetailPanel key="detail" />}
+        </AnimatePresence>
       </div>
 
-      {/* Add email modal */}
       <AddEmailModal open={addModalOpen} onClose={() => setAddModalOpen(false)} />
 
-      {/* Toast notifications */}
       <Toaster
         position="bottom-right"
         toastOptions={{
@@ -84,9 +83,7 @@ function AppContent() {
             fontSize: '13px',
             fontFamily: 'Inter, sans-serif',
           },
-          success: {
-            iconTheme: { primary: '#6C63FF', secondary: '#fff' },
-          },
+          success: { iconTheme: { primary: '#6C63FF', secondary: '#fff' } },
         }}
       />
     </div>
