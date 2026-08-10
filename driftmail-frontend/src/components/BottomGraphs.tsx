@@ -3,18 +3,25 @@ import { useQuery } from '@tanstack/react-query'
 import { listEmails } from '../api/client'
 import { PRIORITY_COLORS, CATEGORY_COLORS, formatCategory } from '../utils/colors'
 
-const LargeDonut = ({ data, title, subtitle }: { data: { label: string, val: number, color: string }[], title: string, subtitle: string }) => {
+const MassiveDonut = ({ data, title, subtitle }: { data: { label: string, val: number, color: string }[], title: string, subtitle: string }) => {
   const total = data.reduce((acc, curr) => acc + curr.val, 0)
   if (total === 0) return null
 
   let offset = 25 
   
   return (
-    <div className="flex items-center gap-10 bg-white border border-[#D4C5A9] rounded-2xl p-8 flex-1 shadow-sm">
+    <div className="flex flex-col items-center gap-16 bg-white border border-[#D4C5A9] rounded-[48px] p-20 flex-1 shadow-sm">
+      
+      {/* Title */}
+      <div className="text-center space-y-3">
+        <h3 className="text-[42px] font-black text-[#0A0A0A] tracking-tight">{title}</h3>
+        <p className="text-[20px] text-[#666] font-medium">{subtitle}</p>
+      </div>
+
       {/* Chart */}
-      <div className="relative w-40 h-40 flex-shrink-0">
-        <svg viewBox="0 0 42 42" className="w-full h-full -rotate-90">
-          <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#E8DEC8" strokeWidth="5" />
+      <div className="relative w-[400px] h-[400px] flex-shrink-0">
+        <svg viewBox="0 0 42 42" className="w-full h-full -rotate-90 drop-shadow-md">
+          <circle cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="#E8DEC8" strokeWidth="4" />
           {data.map((item, i) => {
             if (item.val === 0) return null
             const pct = (item.val / total) * 100
@@ -29,7 +36,7 @@ const LargeDonut = ({ data, title, subtitle }: { data: { label: string, val: num
                 r="15.91549430918954"
                 fill="transparent"
                 stroke={item.color}
-                strokeWidth="5"
+                strokeWidth="4"
                 strokeDasharray={dash}
                 strokeDashoffset={currentOffset}
                 className="transition-all duration-1000 ease-out"
@@ -38,31 +45,25 @@ const LargeDonut = ({ data, title, subtitle }: { data: { label: string, val: num
           })}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-[#0A0A0A]">
-          <span className="text-[28px] font-bold leading-none">{total}</span>
-          <span className="text-[12px] font-semibold text-[#888] mt-1 uppercase tracking-wider">Total</span>
+          <span className="text-[72px] font-black leading-none tracking-tight">{total}</span>
+          <span className="text-[20px] font-bold text-[#888] mt-2 uppercase tracking-[0.2em]">Total</span>
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex-1 space-y-4">
-        <div>
-          <h3 className="text-[20px] font-bold text-[#0A0A0A]">{title}</h3>
-          <p className="text-[14px] text-[#555] font-medium mt-1">{subtitle}</p>
-        </div>
-        <div className="space-y-3">
-          {data.sort((a,b) => b.val - a.val).slice(0, 4).map((item, i) => (
-            <div key={i} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-[15px] text-[#222] font-bold">{item.label}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-[14px] text-[#888] font-medium">{item.val}</span>
-                <span className="text-[15px] font-bold text-[#0A0A0A] w-10 text-right">{Math.round((item.val / total) * 100)}%</span>
-              </div>
+      <div className="w-full max-w-md space-y-6 mt-4">
+        {data.sort((a,b) => b.val - a.val).slice(0, 4).map((item, i) => (
+          <div key={i} className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="w-6 h-6 rounded-full shadow-inner" style={{ backgroundColor: item.color }} />
+              <span className="text-[24px] text-[#222] font-bold">{item.label}</span>
             </div>
-          ))}
-        </div>
+            <div className="flex items-center gap-6">
+              <span className="text-[24px] text-[#888] font-bold">{item.val}</span>
+              <span className="text-[24px] font-black text-[#0A0A0A] w-20 text-right">{Math.round((item.val / total) * 100)}%</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -75,7 +76,11 @@ export default function BottomGraphs() {
     refetchInterval: 10000,
   })
 
-  if (allEmails.length === 0) return null
+  if (allEmails.length === 0) return (
+    <div className="w-full flex items-center justify-center">
+      <span className="text-2xl font-bold text-[#888]">No data to display graphs. Sync your inbox!</span>
+    </div>
+  )
 
   // Process Priorities
   const pCount = { high: 0, medium: 0, low: 0 }
@@ -113,9 +118,9 @@ export default function BottomGraphs() {
   })
 
   return (
-    <div className="h-full w-full px-8 py-6 flex gap-8 items-center bg-[#E8DEC8]">
-      <LargeDonut data={pData} title="Priority Analytics" subtitle="Machine Learning Scoring Model Output" />
-      <LargeDonut data={cData} title="Category Classification" subtitle="BERT Text Classification Output" />
+    <div className="w-full max-w-[1800px] flex gap-12 items-center justify-center">
+      <MassiveDonut data={pData} title="Priority Analytics" subtitle="Machine Learning Scoring Model Output" />
+      <MassiveDonut data={cData} title="Category Classification" subtitle="BERT Text Classification Output" />
     </div>
   )
 }

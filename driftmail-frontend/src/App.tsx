@@ -58,35 +58,35 @@ function AppContent() {
   }, [])
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#F2EDE3]">
+    <div className="w-full bg-[#F2EDE3] overflow-x-hidden">
       <GmailBanner show={reconnectBanner} />
 
-      {/* 1st Section: Top Navbar */}
-      <Navbar />
+      {/* PAGE 1: 100vh App Interface */}
+      <div className="h-screen flex flex-col">
+        {/* Top Navbar */}
+        <Navbar />
 
-      {/* Body Layout */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        
-        {/* 2nd Section: Sidebar */}
-        <Sidebar onAddEmail={() => setAddModalOpen(true)} />
+        {/* Body Layout */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* Sidebar */}
+          <Sidebar onAddEmail={() => setAddModalOpen(true)} />
 
-        {/* Right Flex Column */}
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          
-          {/* 3rd Section: Emails (Inbox + Details) */}
-          <div className="flex flex-1 min-h-0 relative">
-            <InboxList />
-            <AnimatePresence>
-              {selectedEmailId && <DetailPanel key="detail" />}
-            </AnimatePresence>
+          {/* Right Flex Column */}
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+            {/* Emails (Inbox + Details) */}
+            <div className="flex flex-1 min-h-0 relative">
+              <InboxList />
+              <AnimatePresence>
+                {selectedEmailId && <DetailPanel key="detail" />}
+              </AnimatePresence>
+            </div>
           </div>
-
-          {/* 4th Section: Large Bottom Graphs */}
-          <div className="h-[300px] flex-shrink-0 border-t border-[#D4C5A9]">
-            <BottomGraphs />
-          </div>
-
         </div>
+      </div>
+
+      {/* PAGE 2: 100vh Analytics Dashboard */}
+      <div className="min-h-screen border-t border-[#D4C5A9] bg-[#E8DEC8] flex items-center justify-center p-12">
+        <BottomGraphs />
       </div>
 
       <AddEmailModal open={addModalOpen} onClose={() => setAddModalOpen(false)} />
