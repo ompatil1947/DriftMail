@@ -2,7 +2,12 @@
 GET  /auth/google/login      -> redirects the browser to Google's consent screen
 GET  /auth/google/callback   -> Google redirects here with ?code=...
 GET  /auth/google/status     -> is Gmail currently connected?
-POST /auth/google/disconnect -> forget the stored tokens
+POST /auth/google/disconnect -> forget the stored tokens and wipe Gmail data
+
+ACCOUNT SWITCHING FIX:
+  On /callback, we explicitly call token_store.disconnect() BEFORE saving new
+  tokens. This guarantees any leftover token file from a previous account is
+  wiped, even in edge cases where Google doesn't return a new refresh_token.
 """
 import secrets
 
@@ -17,15 +22,12 @@ from app.db.models import Email, QAHistory
 
 router = APIRouter(prefix="/auth/google", tags=["auth"])
 
-# In-memory CSRF state store. Fine for a single-process personal project --
-# if you ever run multiple uvicorn workers behind a load balancer, swap this
-# for something shared (Redis, a DB row) since each worker would otherwise
-# have its own copy of this set.
+# In-memory CSRF state store. Fine for a single-process personal project.
 _pending_states: set[str] = set()
 
 
 def _clear_gmail_data(db: Session):
-    """Helper to wipe all Gmail-sourced emails and their Q&A history."""
+    """Wipe all Gmail-sourced emails and their Q&A history from the database."""
     gmail_emails = db.query(Email).filter(Email.source == "gmail").all()
     if gmail_emails:
         email_ids = [e.id for e in gmail_emails]
@@ -50,7 +52,6 @@ def callback(
     db: Session = Depends(get_db),
 ):
     if error:
-        # e.g. the user clicked "Cancel" on Google's consent screen
         raise HTTPException(status_code=400, detail=f"Google returned an error: {error}")
 
     if not state or state not in _pending_states:
@@ -62,10 +63,21 @@ def callback(
 
     try:
         tokens = gmail_service.exchange_code_for_tokens(code)
+
+        # ACCOUNT SWITCHING: force-clear any existing token file BEFORE saving
+        # the new one. This ensures we never accidentally reuse an old account's
+        # refresh_token if Google omits it from the response.
+        token_store.disconnect()
+
         token_store.save_tokens(tokens)
-        # Wipe old Gmail data when a new account is connected
+
+        # Wipe old Gmail data from the database when a new account connects
         _clear_gmail_data(db)
+
     except gmail_service.GoogleTokenError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    except RuntimeError as e:
+        # e.g. no refresh_token in response and none stored
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     if settings.frontend_url:
@@ -80,7 +92,7 @@ def status():
 
 @router.post("/disconnect")
 def disconnect(db: Session = Depends(get_db)):
+    """Disconnect Gmail: remove tokens and wipe all synced emails from the DB."""
     token_store.disconnect()
-    # Wipe old Gmail data when disconnected
     _clear_gmail_data(db)
     return {"disconnected": True}

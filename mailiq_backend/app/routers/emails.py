@@ -8,7 +8,13 @@ GET    /emails/{id}             — full detail row
 PATCH  /emails/{id}             — toggle starred / pinned
 POST   /emails/{id}/ask         — RAG "ask about this email"
 GET    /emails/{id}/qa-history  — prior Q&A pairs for this email
+
+Memory notes:
+  • sync default batch reduced from 20 → 10 to fit within Render 512 MB.
+  • gc.collect() called after sync loop to release tensor memory.
+  • Each individual email processing is wrapped to not abort the entire sync.
 """
+import gc
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from typing import List, Optional
@@ -69,10 +75,13 @@ def create_email(payload: EmailCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/sync", response_model=List[EmailOut])
-def sync_gmail(max_results: int = Query(default=20, ge=1, le=50), db: Session = Depends(get_db)):
+def sync_gmail(
+    max_results: int = Query(default=10, ge=1, le=25),  # reduced cap from 50→25, default 20→10
+    db: Session = Depends(get_db),
+):
     """
     Fetch the latest emails from Gmail, classify each one with the BiGRU model,
-    and save them to the local database.  Already-stored messages (matched by
+    and save them to the local database. Already-stored messages (matched by
     google_message_id) are skipped so re-syncing never creates duplicates.
     Returns the full list of newly-saved emails (may be empty if everything was
     already synced).
@@ -98,56 +107,61 @@ def sync_gmail(max_results: int = Query(default=20, ge=1, le=50), db: Session = 
 
     saved: List[Email] = []
 
-    for message_id in message_ids:
-        # Skip if already in the database
-        existing = db.query(Email).filter(Email.google_message_id == message_id).first()
-        if existing:
-            continue
+    try:
+        for message_id in message_ids:
+            # Skip if already in the database
+            existing = db.query(Email).filter(Email.google_message_id == message_id).first()
+            if existing:
+                continue
 
-        # 3. Fetch the full message
-        try:
-            msg = gmail_service.get_message(access_token, message_id)
-        except Exception:
-            # Don't let one bad message abort the entire sync
-            continue
-
-        # 4. Parse the received date; fall back to now if unparseable
-        received_at = datetime.now(timezone.utc)
-        if msg.get("date"):
+            # 3. Fetch the full message
             try:
-                received_at = parsedate_to_datetime(msg["date"])
+                msg = gmail_service.get_message(access_token, message_id)
             except Exception:
-                pass
+                # Don't let one bad message abort the entire sync
+                continue
 
-        # 5. Classify with the BiGRU model
-        subject = msg.get("subject") or "(no subject)"
-        body = msg.get("body") or msg.get("snippet") or ""
-        try:
-            category, cat_conf, priority, pri_conf = classifier.predict(subject, body)
-        except Exception:
-            category, cat_conf, priority, pri_conf = "inbox", 0.5, "medium", 0.5
+            # 4. Parse the received date; fall back to now if unparseable
+            received_at = datetime.now(timezone.utc)
+            if msg.get("date"):
+                try:
+                    received_at = parsedate_to_datetime(msg["date"])
+                except Exception:
+                    pass
 
-        # 6. Persist to the database
-        email = Email(
-            google_message_id=message_id,
-            subject=subject,
-            body=body,
-            sender=msg.get("sender", ""),
-            category=category,
-            category_confidence=cat_conf,
-            priority=priority,
-            priority_confidence=pri_conf,
-            source="gmail",
-            received_at=received_at,
-            created_at=datetime.now(timezone.utc),
-        )
-        db.add(email)
-        try:
-            db.commit()
-            db.refresh(email)
-            saved.append(email)
-        except Exception:
-            db.rollback()  # e.g. unique constraint on google_message_id
+            # 5. Classify with the BiGRU model
+            subject = msg.get("subject") or "(no subject)"
+            body = msg.get("body") or msg.get("snippet") or ""
+            try:
+                category, cat_conf, priority, pri_conf = classifier.predict(subject, body)
+            except Exception:
+                category, cat_conf, priority, pri_conf = "updates", 0.5, "medium", 0.5
+
+            # 6. Persist to the database
+            email = Email(
+                google_message_id=message_id,
+                subject=subject,
+                body=body,
+                sender=msg.get("sender", ""),
+                category=category,
+                category_confidence=cat_conf,
+                priority=priority,
+                priority_confidence=pri_conf,
+                source="gmail",
+                received_at=received_at,
+                created_at=datetime.now(timezone.utc),
+            )
+            db.add(email)
+            try:
+                db.commit()
+                db.refresh(email)
+                saved.append(email)
+            except Exception:
+                db.rollback()  # e.g. unique constraint on google_message_id
+
+    finally:
+        # Release any tensors allocated during torch inference
+        gc.collect()
 
     return saved
 

@@ -1,24 +1,22 @@
 """
 Loads your trained BiGRU multi-task classifier from models/email_classifier/
-(bigru_model.pt, vocab.pkl, model_config.pkl -- the three files your
-notebook's final "save artifacts" cell produces). Falls back to a keyword
-heuristic if those files aren't there yet, so the API is runnable and
-testable before training finishes.
+(bigru_model.pt, vocab.pkl, model_config.pkl).
 
-Preprocessing here is copied verbatim from the notebook (clean_text,
-tokenize, encode) -- it must match exactly, or the vocabulary indices
-won't line up with what the model was trained on.
+MEMORY OPTIMISATION: The model is loaded LAZILY on the first predict() call,
+not at import time. This saves ~150 MB of RAM at startup on Render's free tier.
+A threading.Lock ensures only one thread loads the model even under concurrency.
 """
+import gc
 import os
 import pickle
 import re
+import threading
 
 MODEL_DIR = os.path.join(
     os.path.dirname(__file__), "..", "..", "models", "email_classifier"
 )
 
-# Fallback defaults if model_config.pkl isn't present yet -- overwritten by
-# the real config the moment a trained model is dropped in.
+# Fallback defaults if model_config.pkl isn't present yet
 CATEGORIES = [
     "forum", "promotions", "social_media", "spam", "updates",
     "verify_code", "oportunities", "finance", "college",
@@ -40,20 +38,48 @@ def tokenize(text: str):
 
 
 class EmailClassifier:
+    """
+    BiGRU email classifier with lazy loading.
+
+    The heavy torch import and model weights (~6 MB on disk, ~150 MB in RAM)
+    are loaded only when predict() is first called, not at module import time.
+    """
+
     def __init__(self):
-        self.using_trained_model = os.path.isdir(MODEL_DIR) and {
-            "bigru_model.pt", "vocab.pkl", "model_config.pkl"
-        }.issubset(set(os.listdir(MODEL_DIR)))
         self._model = None
         self._word2idx = None
         self._config = None
+        self._loaded = False
+        self._lock = threading.Lock()
+
+        # Check early whether the trained artifacts exist so we can
+        # report it accurately, but do NOT load them yet.
+        self.using_trained_model = os.path.isdir(MODEL_DIR) and {
+            "bigru_model.pt", "vocab.pkl", "model_config.pkl"
+        }.issubset(set(os.listdir(MODEL_DIR)))
+
         if self.using_trained_model:
-            self._load()
+            print("[model_service] BiGRU model artifacts found — will load lazily on first predict().")
+        else:
+            print("[model_service] BiGRU model artifacts NOT found — using keyword heuristic fallback.")
+
+    def _ensure_loaded(self):
+        """Load model weights if not already loaded. Thread-safe."""
+        if self._loaded:
+            return
+        with self._lock:
+            if self._loaded:  # double-checked locking
+                return
+            if self.using_trained_model:
+                self._load()
+            self._loaded = True
 
     def _load(self):
+        """Actually load torch model. Called at most once."""
         import torch
-
         from .model_architecture import BiGRUMultiTaskClassifier
+
+        print("[model_service] Loading BiGRU model weights into RAM...")
 
         with open(os.path.join(MODEL_DIR, "vocab.pkl"), "rb") as f:
             self._word2idx = pickle.load(f)
@@ -80,6 +106,9 @@ class EmailClassifier:
         self._model.load_state_dict(state_dict)
         self._model.eval()
 
+        gc.collect()
+        print("[model_service] BiGRU model loaded successfully.")
+
     def _encode(self, text: str):
         pad_idx = self._config["pad_idx"]
         unk_idx = self._word2idx.get("<UNK>", 1)
@@ -90,8 +119,10 @@ class EmailClassifier:
         return ids
 
     def predict(self, subject: str, body: str):
+        """Classify an email. Loads the model lazily on first call."""
+        self._ensure_loaded()
         text = clean_text(f"{subject}. {body}")
-        if self.using_trained_model:
+        if self.using_trained_model and self._model is not None:
             return self._predict_trained(text)
         return self._predict_heuristic(text)
 
@@ -114,8 +145,6 @@ class EmailClassifier:
         )
 
     def _predict_heuristic(self, text: str):
-        # Placeholder only, used until bigru_model.pt/vocab.pkl/model_config.pkl
-        # are placed in models/email_classifier/.
         t = text
         if any(k in t for k in ["unsubscribe", "% off", "sale", "discount"]):
             category, conf = "promotions", 0.6
@@ -139,10 +168,11 @@ class EmailClassifier:
         priority = (
             "high"
             if any(k in t for k in ["urgent", "asap", "expire", "immediately", "deadline"])
-            and category != "spam"  # don't let manufactured spam urgency count
+            and category != "spam"
             else ("medium" if category in {"updates", "forum", "college"} else "low")
         )
         return category, conf, priority, 0.5
 
 
+# Singleton — lazy, nothing loaded until first predict() call
 classifier = EmailClassifier()
