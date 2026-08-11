@@ -1,7 +1,5 @@
 venv/
 __pycache__/
 *.pyc
-models/email_classifier/*.pt
-models/email_classifier/*.pkl
 .env
 data/gmail_tokens.json
