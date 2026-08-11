@@ -104,10 +104,10 @@ class SemanticRAGService:
         return genai
 
     def _embed_texts(self, texts: list[str]) -> list[list[float]]:
-        """Embed a batch of texts using Gemini text-embedding-004."""
+        """Embed a batch of texts using Gemini."""
         genai = self._get_genai()
         result = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/gemini-embedding-2",
             content=texts,
             task_type="retrieval_document",
         )
@@ -117,7 +117,7 @@ class SemanticRAGService:
         """Embed a single query string."""
         genai = self._get_genai()
         result = genai.embed_content(
-            model="models/text-embedding-004",
+            model="models/gemini-embedding-2",
             content=text,
             task_type="retrieval_query",
         )
@@ -197,7 +197,7 @@ class SemanticRAGService:
 
             # 4. Call Gemini for generation
             genai = self._get_genai()
-            gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+            gemini_model = genai.GenerativeModel("models/antigravity-preview-05-2026")
             response = gemini_model.generate_content(prompt)
             answer = response.text.strip()
 
