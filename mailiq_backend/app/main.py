@@ -26,8 +26,6 @@ async def lifespan(app: FastAPI):
     # ── Startup ──────────────────────────────────────────────────────────────
     # Create DB tables (no-op if they already exist)
     Base.metadata.create_all(bind=engine)
-    # Warm up the semantic RAG service (heavy model load done once here)
-    semantic_rag.startup()
     yield
     # ── Shutdown (nothing to clean up) ───────────────────────────────────────
 

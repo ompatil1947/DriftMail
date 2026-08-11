@@ -121,10 +121,13 @@ class SemanticRAGService:
         Falls back gracefully if sentence-transformers or Gemini aren't available.
         """
         if not self._ready:
-            return {
-                "answer": "AI assistance is temporarily unavailable. Please ensure sentence-transformers and google-generativeai are installed.",
-                "grounded": False,
-            }
+            print("[rag_service] Lazy loading SentenceTransformer on first request...")
+            self.startup()
+            if not self._ready:
+                return {
+                    "answer": "AI assistance is temporarily unavailable. Please ensure sentence-transformers and google-generativeai are installed.",
+                    "grounded": False,
+                }
 
         from app.core.config import settings
 
