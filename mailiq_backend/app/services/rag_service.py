@@ -197,7 +197,7 @@ class SemanticRAGService:
 
             # 4. Call Gemini for generation
             genai = self._get_genai()
-            gemini_model = genai.GenerativeModel("models/antigravity-preview-05-2026")
+            gemini_model = genai.GenerativeModel("models/gemini-2.5-flash")
             response = gemini_model.generate_content(prompt)
             answer = response.text.strip()
 
