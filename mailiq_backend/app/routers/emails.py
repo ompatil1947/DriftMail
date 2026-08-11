@@ -158,9 +158,11 @@ def sync_gmail(
                 saved.append(email)
             except Exception:
                 db.rollback()  # e.g. unique constraint on google_message_id
+            
+            # Release tensors per email to avoid OOM
+            gc.collect()
 
     finally:
-        # Release any tensors allocated during torch inference
         gc.collect()
 
     return saved

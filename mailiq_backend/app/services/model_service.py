@@ -77,6 +77,7 @@ class EmailClassifier:
     def _load(self):
         """Actually load torch model. Called at most once."""
         import torch
+        torch.set_num_threads(1)
         from .model_architecture import BiGRUMultiTaskClassifier
 
         print("[model_service] Loading BiGRU model weights into RAM...")
@@ -137,12 +138,18 @@ class EmailClassifier:
         priority_probs = torch.softmax(priority_logits, dim=-1)
         category = CATEGORIES[category_probs.argmax(dim=-1).item()]
         priority = PRIORITIES[priority_probs.argmax(dim=-1).item()]
-        return (
-            category,
-            round(category_probs.max().item(), 3),
-            priority,
-            round(priority_probs.max().item(), 3),
-        )
+        
+        c_conf = round(category_probs.max().item(), 3)
+        p_conf = round(priority_probs.max().item(), 3)
+        
+        del input_tensor
+        del category_logits
+        del priority_logits
+        del category_probs
+        del priority_probs
+        gc.collect()
+        
+        return (category, c_conf, priority, p_conf)
 
     def _predict_heuristic(self, text: str):
         t = text
